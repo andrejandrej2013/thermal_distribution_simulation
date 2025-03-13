@@ -1,0 +1,19 @@
+cmake-build-debug
+
+# Ignore CLion & JetBrains files
+.idea/
+*.iml
+
+# Ignore build files
+cmake-build-*/
+
+# Ignore OS-specific files
+.DS_Store
+
+# Ignore generated files
+*.o
+*.a
+*.so
+*.exe
+*.log
+*.cache
