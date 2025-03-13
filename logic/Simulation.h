@@ -4,7 +4,6 @@
 #include <vector>
 #include <random>
 #include "../dto/TemperatureCell.h"
-#include <CL/cl.h>
 
 class Simulation {
 public:
