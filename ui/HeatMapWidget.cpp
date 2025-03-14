@@ -1,11 +1,13 @@
 #include "HeatMapWidget.h"
+#include <iostream>
+#include <chrono>
 
 HeatMapWidget::HeatMapWidget(QWidget *parent)
     : QWidget(parent){
 
     simulation = Simulation();
 
-    int width = 200, height = 200;
+    int width = 5000, height = 5000;
     if (width > 30 || height > 30) {
         writeTemperature = false;
     }
@@ -17,8 +19,15 @@ HeatMapWidget::HeatMapWidget(QWidget *parent)
 }
 
 void HeatMapWidget::updateSimulation() {
+    auto start = std::chrono::high_resolution_clock::now();
+
     simulation.update();
     update();
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration<double>(end - start);  // Convert to seconds
+
+    std::cout << "Simulation update took: " << duration.count() << " seconds" << std::endl;
 }
 
 void HeatMapWidget::paintEvent(QPaintEvent *event) {
