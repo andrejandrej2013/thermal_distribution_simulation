@@ -5,7 +5,7 @@ HeatMapWidget::HeatMapWidget(QWidget *parent)
 
     simulation = Simulation();
 
-    int width = 250, height = 250;
+    int width = 200, height = 200;
     if (width > 30 || height > 30) {
         writeTemperature = false;
     }
@@ -28,22 +28,19 @@ void HeatMapWidget::paintEvent(QPaintEvent *event) {
 
     int rows = temperatureGrid.size();
     int cols = temperatureGrid[0].size();
-    int cellWidth = width() / cols;
-    int cellHeight = height() / rows;
+
+    double cellWidth = static_cast<double>(width()) / cols;
+    double cellHeight = static_cast<double>(height()) / rows;
 
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < cols; ++x) {
             QColor color = getColorForTemperature(temperatureGrid[y][x].temperature);
-            painter.fillRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight, color);
-            painter.setPen(Qt::black);
-            painter.drawRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
 
-            if (writeTemperature) {
-                // Draw temperature with 2 decimal places
-                painter.setPen(Qt::white);
-                painter.drawText(x * cellWidth + cellWidth / 4, y * cellHeight + cellHeight / 2,
-                                 QString::number(temperatureGrid[y][x].temperature, 'f', 2));
-            }
+            double xPos = x * cellWidth;
+            double yPos = y * cellHeight;
+            QRectF rect(xPos, yPos, cellWidth, cellHeight); // Use QRectF for floating point accuracy
+
+            painter.fillRect(rect, color);
         }
     }
 }
