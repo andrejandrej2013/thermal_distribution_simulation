@@ -7,7 +7,7 @@ void Simulation::generateRandomTemperatureGrid(int width, int height) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> tempDist(-10.0, 50.0);
-    std::uniform_real_distribution<double> diffDist(0.05, 0.15);
+    std::uniform_real_distribution<double> diffDist(0.2, 0.001);
 
     temperatureGrid.resize(height, std::vector<TemperatureCell>(width));
     for (int y = 0; y < height; ++y) {
