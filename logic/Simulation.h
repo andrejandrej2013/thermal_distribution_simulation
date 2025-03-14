@@ -7,12 +7,12 @@
 
 class Simulation {
 public:
-    Simulation(int width = 40, int height = 40);
     void update();
     const std::vector<std::vector<TemperatureCell>>& getTemperatureGrid() const;
+    void generateRandomTemperatureGrid(int width = 40, int height = 40);
 
 private:
-    int width, height;
+    int width = 0, height = 0;
     std::vector<std::vector<TemperatureCell>> temperatureGrid;
 };
 

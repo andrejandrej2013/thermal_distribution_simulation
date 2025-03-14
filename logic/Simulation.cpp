@@ -1,6 +1,9 @@
 #include "Simulation.h"
 
-Simulation::Simulation(int width, int height) : width(width), height(height) {
+void Simulation::generateRandomTemperatureGrid(int width, int height) {
+    this->height = height;
+    this->width = width;
+
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> tempDist(-10.0, 40.0);
@@ -13,6 +16,7 @@ Simulation::Simulation(int width, int height) : width(width), height(height) {
         }
     }
 }
+
 
 void Simulation::update() {
     std::vector<std::vector<TemperatureCell>> newGrid = temperatureGrid;

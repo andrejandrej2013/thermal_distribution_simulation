@@ -20,6 +20,8 @@ private:
     Simulation simulation;
     QTimer timer;
 
+    bool writeTemperature = true;
+
     void updateSimulation();
     QColor getColorForTemperature(double temp) const;
 };

@@ -1,10 +1,19 @@
 #include "HeatMapWidget.h"
 
 HeatMapWidget::HeatMapWidget(QWidget *parent)
-    : QWidget(parent), simulation(40, 40) {
+    : QWidget(parent){
+
+    simulation = Simulation();
+
+    int width = 250, height = 250;
+    if (width > 30 || height > 30) {
+        writeTemperature = false;
+    }
+
+    simulation.generateRandomTemperatureGrid(width, height);
 
     connect(&timer, &QTimer::timeout, this, &HeatMapWidget::updateSimulation);
-    timer.start(1000);
+    timer.start(0);
 }
 
 void HeatMapWidget::updateSimulation() {
@@ -29,10 +38,12 @@ void HeatMapWidget::paintEvent(QPaintEvent *event) {
             painter.setPen(Qt::black);
             painter.drawRect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
 
-            // Draw temperature with 2 decimal places
-            painter.setPen(Qt::white);
-            painter.drawText(x * cellWidth + cellWidth / 4, y * cellHeight + cellHeight / 2,
-                             QString::number(temperatureGrid[y][x].temperature, 'f', 2));
+            if (writeTemperature) {
+                // Draw temperature with 2 decimal places
+                painter.setPen(Qt::white);
+                painter.drawText(x * cellWidth + cellWidth / 4, y * cellHeight + cellHeight / 2,
+                                 QString::number(temperatureGrid[y][x].temperature, 'f', 2));
+            }
         }
     }
 }
