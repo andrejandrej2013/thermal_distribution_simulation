@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <QPainter>
 #include <QTimer>
+#include <iostream>
+#include <chrono>
 #include "../dto/TemperatureCell.h"
 #include "../logic/Simulation.h"
 
@@ -18,11 +20,14 @@ protected:
 
 private:
     Simulation simulation;
-    QTimer timer;
+    QTimer simulationTimer;
+    QTimer uiTimer;
+    QPixmap heatmapCache;
 
     bool writeTemperature = true;
 
     void updateSimulation();
+    void updateUI();
     QColor getColorForTemperature(double temp) const;
 };
 

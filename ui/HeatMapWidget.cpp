@@ -7,22 +7,24 @@ HeatMapWidget::HeatMapWidget(QWidget *parent)
 
     simulation = Simulation();
 
-    int width = 5000, height = 5000;
+    int width = 1000, height = 1000;
     if (width > 30 || height > 30) {
         writeTemperature = false;
     }
 
     simulation.generateRandomTemperatureGrid(width, height);
 
-    connect(&timer, &QTimer::timeout, this, &HeatMapWidget::updateSimulation);
-    timer.start(0);
+    connect(&simulationTimer, &QTimer::timeout, this, &HeatMapWidget::updateSimulation);
+    simulationTimer.start(0);
+
+    connect(&uiTimer, &QTimer::timeout, this, &HeatMapWidget::updateUI);
+    uiTimer.start(0);
 }
 
 void HeatMapWidget::updateSimulation() {
     auto start = std::chrono::high_resolution_clock::now();
 
     simulation.update();
-    update();
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration<double>(end - start);  // Convert to seconds
@@ -30,28 +32,54 @@ void HeatMapWidget::updateSimulation() {
     std::cout << "Simulation update took: " << duration.count() << " seconds" << std::endl;
 }
 
+void HeatMapWidget::updateUI() {
+    auto start = std::chrono::high_resolution_clock::now();
+
+    heatmapCache = QPixmap();
+    update(); // 🔥 Now UI updates separately!
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration<double>(end - start);
+
+    std::cout << "UI update took: " << duration.count() << " seconds" << std::endl;
+}
+
 void HeatMapWidget::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
+
+    // **If no need to redraw, use cached image**
+    if (!heatmapCache.isNull()) {
+        painter.drawPixmap(0, 0, heatmapCache);
+        return;
+    }
+
     auto temperatureGrid = simulation.getTemperatureGrid();
     if (temperatureGrid.empty()) return;
 
     int rows = temperatureGrid.size();
     int cols = temperatureGrid[0].size();
-
     double cellWidth = static_cast<double>(width()) / cols;
     double cellHeight = static_cast<double>(height()) / rows;
+
+    auto start = std::chrono::high_resolution_clock::now();
+
+    heatmapCache = QPixmap(size());
+    heatmapCache.fill(Qt::black);
+    QPainter pixmapPainter(&heatmapCache);
 
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < cols; ++x) {
             QColor color = getColorForTemperature(temperatureGrid[y][x].temperature);
-
-            double xPos = x * cellWidth;
-            double yPos = y * cellHeight;
-            QRectF rect(xPos, yPos, cellWidth, cellHeight); // Use QRectF for floating point accuracy
-
-            painter.fillRect(rect, color);
+            QRectF rect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
+            pixmapPainter.fillRect(rect, color);
         }
     }
+
+    painter.drawPixmap(0, 0, heatmapCache);
+
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration<double>(end - start);
+    std::cout << "UI render took: " << duration.count() << " seconds" << std::endl;
 }
 
 QColor HeatMapWidget::getColorForTemperature(double temp) const {
