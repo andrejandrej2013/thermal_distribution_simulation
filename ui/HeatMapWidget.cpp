@@ -1,67 +1,48 @@
 #include "HeatMapWidget.h"
+#include <QPainter>
 #include <iostream>
 #include <chrono>
 
 HeatMapWidget::HeatMapWidget(QWidget *parent)
-    : QWidget(parent){
-
-    simulation = Simulation();
-
-    int width = 1000, height = 1000;
-    if (width > 30 || height > 30) {
-        writeTemperature = false;
-    }
-
-    simulation.generateRandomTemperatureGrid(width, height);
-
+    : QWidget(parent),
+      simulation(800, 800),
+      gridWidth(800), gridHeight(800)
+{
     connect(&simulationTimer, &QTimer::timeout, this, &HeatMapWidget::updateSimulation);
-    simulationTimer.start(0);
+    simulationTimer.start(16); // ~60 FPS
 
     connect(&uiTimer, &QTimer::timeout, this, &HeatMapWidget::updateUI);
-    uiTimer.start(0);
+    uiTimer.start(16); // ~60 FPS
 }
 
 void HeatMapWidget::updateSimulation() {
     auto start = std::chrono::high_resolution_clock::now();
-
-    simulation.update();
-
+    simulation.step();
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration<double>(end - start);  // Convert to seconds
-
-    std::cout << "Simulation update took: " << duration.count() << " seconds" << std::endl;
+    std::chrono::duration<double> duration = end - start;
+    std::cout << "Simulation step took: " << duration.count() << " seconds\n";
 }
 
 void HeatMapWidget::updateUI() {
-    auto start = std::chrono::high_resolution_clock::now();
-
-    heatmapCache = QPixmap();
-    update(); // 🔥 Now UI updates separately!
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration<double>(end - start);
-
-    std::cout << "UI update took: " << duration.count() << " seconds" << std::endl;
+    heatmapCache = QPixmap(); // Clear cache
+    update(); // Trigger paintEvent
 }
 
 void HeatMapWidget::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
 
-    // **If no need to redraw, use cached image**
     if (!heatmapCache.isNull()) {
         painter.drawPixmap(0, 0, heatmapCache);
         return;
     }
 
-    auto temperatureGrid = simulation.getTemperatureGrid();
-    if (temperatureGrid.empty()) return;
+    auto data = simulation.getTemperatureData();
+    if (data.empty()) return;
 
-    int rows = temperatureGrid.size();
-    int cols = temperatureGrid[0].size();
+    int rows = gridHeight;
+    int cols = gridWidth;
     double cellWidth = static_cast<double>(width()) / cols;
     double cellHeight = static_cast<double>(height()) / rows;
-
-    auto start = std::chrono::high_resolution_clock::now();
 
     heatmapCache = QPixmap(size());
     heatmapCache.fill(Qt::black);
@@ -69,70 +50,51 @@ void HeatMapWidget::paintEvent(QPaintEvent *event) {
 
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < cols; ++x) {
-            QColor color = getColorForTemperature(temperatureGrid[y][x].temperature);
+            float temp = data[y * gridWidth + x];
+            QColor color = getColorForTemperature(temp);
             QRectF rect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
             pixmapPainter.fillRect(rect, color);
         }
     }
 
     painter.drawPixmap(0, 0, heatmapCache);
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration<double>(end - start);
-    std::cout << "UI render took: " << duration.count() << " seconds" << std::endl;
 }
 
-QColor HeatMapWidget::getColorForTemperature(double temp) const {
-    QColor extremeCold = QColor(0, 0, 139);      // Dark blue (<=-20°C)
-    QColor cold = QColor(0, 255, 255);           // Cyan (~10°C)
-    QColor cool = QColor(173, 255, 47);          // Yellow-green (~15°C)
-    QColor normal = QColor(0, 255, 0);           // **Bright green (22°C)**
-    QColor warm = QColor(255, 165, 0);           // Orange (~30°C)
-    QColor hot = QColor(255, 0, 0);              // Red (>=~40°C)
+QColor HeatMapWidget::getColorForTemperature(float temp) const {
+    QColor extremeCold(0, 0, 139);
+    QColor cold(0, 255, 255);
+    QColor cool(173, 255, 47);
+    QColor normal(0, 255, 0);
+    QColor warm(255, 165, 0);
+    QColor hot(255, 0, 0);
 
-    if (temp <= -20) return extremeCold;   // **Extreme cold → Dark Blue**
-    if (temp >= 40) return hot;            // **Extreme heat → Red**
+    if (temp <= -20) return extremeCold;
+    if (temp >= 40) return hot;
 
     if (temp < 10) {
-        // **Transition from Dark Blue (-20°C) → Cyan (10°C)**
-        double ratio = (temp + 20) / 30.0;
-        return QColor(
-            (1 - ratio) * extremeCold.red() + ratio * cold.red(),
-            (1 - ratio) * extremeCold.green() + ratio * cold.green(),
-            (1 - ratio) * extremeCold.blue() + ratio * cold.blue()
-        );
+        float r = (temp + 20) / 30.0f;
+        return QColor::fromRgbF((1 - r) * extremeCold.redF() + r * cold.redF(),
+                                (1 - r) * extremeCold.greenF() + r * cold.greenF(),
+                                (1 - r) * extremeCold.blueF() + r * cold.blueF());
     } else if (temp < 15) {
-        // **Transition from Cyan (10°C) → Yellow-Green (15°C)**
-        double ratio = (temp - 10) / 5.0;
-        return QColor(
-            (1 - ratio) * cold.red() + ratio * cool.red(),
-            (1 - ratio) * cold.green() + ratio * cool.green(),
-            (1 - ratio) * cold.blue() + ratio * cool.blue()
-        );
+        float r = (temp - 10) / 5.0f;
+        return QColor::fromRgbF((1 - r) * cold.redF() + r * cool.redF(),
+                                (1 - r) * cold.greenF() + r * cool.greenF(),
+                                (1 - r) * cold.blueF() + r * cool.blueF());
     } else if (temp < 22) {
-        // **Transition from Yellow-Green (15°C) → Bright Green (22°C)**
-        double ratio = (temp - 15) / 7.0;
-        return QColor(
-            (1 - ratio) * cool.red() + ratio * normal.red(),
-            (1 - ratio) * cool.green() + ratio * normal.green(),
-            (1 - ratio) * cool.blue() + ratio * normal.blue()
-        );
+        float r = (temp - 15) / 7.0f;
+        return QColor::fromRgbF((1 - r) * cool.redF() + r * normal.redF(),
+                                (1 - r) * cool.greenF() + r * normal.greenF(),
+                                (1 - r) * cool.blueF() + r * normal.blueF());
     } else if (temp < 30) {
-        // **Transition from Bright Green (22°C) → Orange (30°C)**
-        double ratio = (temp - 22) / 8.0;
-        return QColor(
-            (1 - ratio) * normal.red() + ratio * warm.red(),
-            (1 - ratio) * normal.green() + ratio * warm.green(),
-            (1 - ratio) * normal.blue() + ratio * warm.blue()
-        );
+        float r = (temp - 22) / 8.0f;
+        return QColor::fromRgbF((1 - r) * normal.redF() + r * warm.redF(),
+                                (1 - r) * normal.greenF() + r * warm.greenF(),
+                                (1 - r) * normal.blueF() + r * warm.blueF());
     } else {
-        // **Transition from Orange (30°C) → Red (40°C)**
-        double ratio = (temp - 30) / 10.0;
-        return QColor(
-            (1 - ratio) * warm.red() + ratio * hot.red(),
-            (1 - ratio) * warm.green() + ratio * hot.green(),
-            (1 - ratio) * warm.blue() + ratio * hot.blue()
-        );
+        float r = (temp - 30) / 10.0f;
+        return QColor::fromRgbF((1 - r) * warm.redF() + r * hot.redF(),
+                                (1 - r) * warm.greenF() + r * hot.greenF(),
+                                (1 - r) * warm.blueF() + r * hot.blueF());
     }
 }
-

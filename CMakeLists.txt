@@ -6,25 +6,55 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-
+# Qt
 find_package(Qt6 COMPONENTS
-  Core
-  Gui
-  Widgets
-  REQUIRED)
-
-add_executable(thermal_distribution_simulation main.cpp
-        ui/HeatMapWidget.h
-        ui/HeatMapWidget.cpp
-        logic/Simulation.h
-        logic/Simulation.cpp
-        dto/TemperatureGrid.h
-        dto/TemperatureGrid.cpp
-        dto/TemperatureCell.h
-        dto/TemperatureCell.cpp)
-target_link_libraries(thermal_distribution_simulation
-  Qt::Core
-  Qt::Gui
-  Qt::Widgets
+        Core
+        Gui
+        Widgets
+        Test
+        REQUIRED
 )
 
+# Set OpenCL as a system framework manually for macOS
+if(APPLE)
+    set(OPENCL_LIBRARIES "-framework OpenCL")
+else()
+    find_package(OpenCL REQUIRED)
+endif()
+
+# Main executable
+add_executable(thermal_distribution_simulation
+        main.cpp
+        ui/HeatMapWidget.h
+        ui/HeatMapWidget.cpp
+        logic/OpenCLSimulation.h
+        logic/OpenCLSimulation.cpp
+)
+
+target_link_libraries(thermal_distribution_simulation
+        Qt::Core
+        Qt::Gui
+        Qt::Widgets
+        ${OPENCL_LIBRARIES}
+)
+
+# Tests
+add_executable(tests
+        tests/HeatMapWidgetTest.cpp
+        ui/HeatMapWidget.cpp
+        logic/OpenCLSimulation.h
+        logic/OpenCLSimulation.cpp
+)
+
+target_link_libraries(tests
+        Qt::Core
+        Qt::Gui
+        Qt::Widgets
+        Qt::Test
+        ${OPENCL_LIBRARIES}
+)
+
+enable_testing()
+add_test(NAME HeatMapWidgetTest COMMAND tests)
+
+configure_file(kernel.cl kernel.cl COPYONLY)

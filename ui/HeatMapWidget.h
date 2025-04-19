@@ -2,12 +2,9 @@
 #define HEATMAPWIDGET_H
 
 #include <QWidget>
-#include <QPainter>
 #include <QTimer>
-#include <iostream>
-#include <chrono>
-#include "../dto/TemperatureCell.h"
-#include "../logic/Simulation.h"
+#include <QPixmap>
+#include "../logic/OpenCLSimulation.h"
 
 class HeatMapWidget : public QWidget {
     Q_OBJECT
@@ -19,16 +16,17 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
-    Simulation simulation;
     QTimer simulationTimer;
     QTimer uiTimer;
     QPixmap heatmapCache;
 
-    bool writeTemperature = true;
+    OpenCLSimulation simulation;
+    int gridWidth;
+    int gridHeight;
 
     void updateSimulation();
     void updateUI();
-    QColor getColorForTemperature(double temp) const;
+    QColor getColorForTemperature(float temp) const;
 };
 
 #endif
