@@ -6,7 +6,7 @@
 
 class OpenCLSimulation {
 public:
-    OpenCLSimulation(int width, int height); // ← updated constructor
+    OpenCLSimulation(int width, int height);
     ~OpenCLSimulation();
 
     void step();

@@ -10,7 +10,7 @@ private slots:
         widget.resize(800, 800);
         widget.show();
 
-        QTest::qWait(100);  // Let it initialize
+        QTest::qWait(100);
 
         auto start = std::chrono::high_resolution_clock::now();
         QTest::qWait(1);  // trigger at least one paintEvent
