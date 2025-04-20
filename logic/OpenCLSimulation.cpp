@@ -38,6 +38,8 @@ OpenCLSimulation::~OpenCLSimulation() {
     clReleaseProgram(program);
     clReleaseCommandQueue(queue);
     clReleaseContext(context);
+    clReleaseMemObject(outputColorBuffer);
+    clReleaseKernel(colorKernel);
 }
 
 void OpenCLSimulation::initOpenCL() {
@@ -64,6 +66,8 @@ void OpenCLSimulation::loadKernel() {
     }
 
     kernel = clCreateKernel(program, "updateTemp", nullptr);
+    colorKernel = clCreateKernel(program, "temperatureToColor", nullptr);
+
 }
 
 void OpenCLSimulation::allocateBuffers() {
@@ -72,6 +76,9 @@ void OpenCLSimulation::allocateBuffers() {
 
     diffBuffer = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
                                 sizeof(float) * diffusion.size(), diffusion.data(), nullptr);
+
+    outputColorBuffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
+                                   sizeof(uchar) * width * height * 4, nullptr, nullptr);
 
     clSetKernelArg(kernel, 0, sizeof(cl_mem), &tempBuffer);
     clSetKernelArg(kernel, 1, sizeof(cl_mem), &diffBuffer);
@@ -86,6 +93,21 @@ void OpenCLSimulation::step() {
     clFinish(queue);
 
     clEnqueueReadBuffer(queue, tempBuffer, CL_TRUE, 0, sizeof(float) * temperature.size(), temperature.data(), 0, nullptr, nullptr);
+}
+
+void OpenCLSimulation::generateColorImage(uchar* pixelBuffer) {
+    clSetKernelArg(colorKernel, 0, sizeof(cl_mem), &tempBuffer);
+    clSetKernelArg(colorKernel, 1, sizeof(cl_mem), &outputColorBuffer);
+    clSetKernelArg(colorKernel, 2, sizeof(int), &width);
+    clSetKernelArg(colorKernel, 3, sizeof(int), &height);
+
+    size_t globalSize[2] = { static_cast<size_t>(width), static_cast<size_t>(height) };
+
+    clEnqueueNDRangeKernel(queue, colorKernel, 2, nullptr, globalSize, nullptr, 0, nullptr, nullptr);
+    clFinish(queue);
+
+    clEnqueueReadBuffer(queue, outputColorBuffer, CL_TRUE, 0,
+                        sizeof(uchar) * width * height * 4, pixelBuffer, 0, nullptr, nullptr);
 }
 
 const std::vector<float>& OpenCLSimulation::getTemperatureData() const {

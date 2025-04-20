@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <OpenCL/opencl.h>
+#include <QtCore/qtypes.h>
 
 class OpenCLSimulation {
 public:
@@ -11,6 +12,7 @@ public:
 
     void step();
     const std::vector<float>& getTemperatureData() const;
+    void generateColorImage(uchar* pixelBuffer);
 
 private:
     int width;
@@ -24,6 +26,8 @@ private:
     cl_command_queue queue;
     cl_program program;
     cl_kernel kernel;
+    cl_kernel colorKernel;
+    cl_mem outputColorBuffer;
     cl_mem tempBuffer;
     cl_mem diffBuffer;
 
