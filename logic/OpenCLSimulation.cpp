@@ -2,15 +2,28 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include "PerlinNoise.hpp"
+
 
 OpenCLSimulation::OpenCLSimulation(int w, int h) : width(w), height(h) {
     temperature.resize(width * height);
     diffusion.resize(width * height);
 
-    // Random init
-    for (int i = 0; i < width * height; ++i) {
-        temperature[i] = static_cast<float>(rand() % 60 - 10); // -10°C to 50°C
-        diffusion[i] = 0.01f + static_cast<float>(rand()) / RAND_MAX * 0.2f;
+    siv::PerlinNoise noise(std::random_device{}());
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            float nx = static_cast<float>(x) / width;
+            float ny = static_cast<float>(y) / height;
+
+            float n = noise.noise2D(5.0f * nx, 5.0f * ny);
+            n = (n + 1.0f) / 2.0f;
+            temperature[y * width + x] = n * 60.0f - 10.0f;
+
+            float d = noise.noise2D(5.0f * nx + 100, 5.0f * ny + 100);
+            d = (d + 1.0f) / 2.0f;
+            diffusion[y * width + x] = 0.01f + d * 0.2f;
+        }
     }
 
     initOpenCL();

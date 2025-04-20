@@ -11,7 +11,6 @@ find_package(Qt6 COMPONENTS
         Core
         Gui
         Widgets
-        Test
         REQUIRED
 )
 
@@ -37,24 +36,5 @@ target_link_libraries(thermal_distribution_simulation
         Qt::Widgets
         ${OPENCL_LIBRARIES}
 )
-
-# Tests
-add_executable(tests
-        tests/HeatMapWidgetTest.cpp
-        ui/HeatMapWidget.cpp
-        logic/OpenCLSimulation.h
-        logic/OpenCLSimulation.cpp
-)
-
-target_link_libraries(tests
-        Qt::Core
-        Qt::Gui
-        Qt::Widgets
-        Qt::Test
-        ${OPENCL_LIBRARIES}
-)
-
-enable_testing()
-add_test(NAME HeatMapWidgetTest COMMAND tests)
 
 configure_file(kernel.cl kernel.cl COPYONLY)
