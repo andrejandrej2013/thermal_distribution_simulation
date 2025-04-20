@@ -69,7 +69,7 @@ void HeatMapWidget::paintEvent(QPaintEvent *event) {
     // Draw FPS & backend update time
     painter.setPen(Qt::white);
     painter.setFont(QFont("Arial", 10, QFont::Bold));
-    QString info = QString("FPS: %1\nBackend: %2 ms").arg(currentFps, 0, 'f', 1).arg(lastUpdateDuration, 0, 'f', 2);
+    QString info = QString("FPS: %1 Backend: %2 ms").arg(currentFps, 0, 'f', 1).arg(lastUpdateDuration, 0, 'f', 2);
     painter.drawText(width() - 150, 20, info);
 }
 
