@@ -29,6 +29,7 @@ void HeatMapWidget::updateUI() {
 }
 
 void HeatMapWidget::paintEvent(QPaintEvent *event) {
+    auto fullStart = std::chrono::high_resolution_clock::now();
     QPainter painter(this);
 
     if (!heatmapCache.isNull()) {
@@ -36,7 +37,10 @@ void HeatMapWidget::paintEvent(QPaintEvent *event) {
         return;
     }
 
+    auto dataFetchStart = std::chrono::high_resolution_clock::now();
     auto data = simulation.getTemperatureData();
+    auto dataFetchEnd = std::chrono::high_resolution_clock::now();
+
     if (data.empty()) return;
 
     int rows = gridHeight;
@@ -44,6 +48,7 @@ void HeatMapWidget::paintEvent(QPaintEvent *event) {
     double cellWidth = static_cast<double>(width()) / cols;
     double cellHeight = static_cast<double>(height()) / rows;
 
+    auto renderStart = std::chrono::high_resolution_clock::now();
     heatmapCache = QPixmap(size());
     heatmapCache.fill(Qt::black);
     QPainter pixmapPainter(&heatmapCache);
@@ -56,21 +61,14 @@ void HeatMapWidget::paintEvent(QPaintEvent *event) {
             pixmapPainter.fillRect(rect, color);
         }
     }
+    auto renderEnd = std::chrono::high_resolution_clock::now();
 
     painter.drawPixmap(0, 0, heatmapCache);
+    auto fullEnd = std::chrono::high_resolution_clock::now();
 
-    frameCount++;
-    if (fpsTimer.elapsed() >= 1000) {
-        currentFps = frameCount * 1000.0 / fpsTimer.elapsed();
-        frameCount = 0;
-        fpsTimer.restart();
-    }
-
-    // Draw FPS & backend update time
-    painter.setPen(Qt::white);
-    painter.setFont(QFont("Arial", 10, QFont::Bold));
-    QString info = QString("FPS: %1 Backend: %2 ms").arg(currentFps, 0, 'f', 1).arg(lastUpdateDuration, 0, 'f', 2);
-    painter.drawText(width() - 150, 20, info);
+    std::cout << "Data fetch: " << std::chrono::duration<double, std::milli>(dataFetchEnd - dataFetchStart).count() << " ms\n";
+    std::cout << "Render fillRects: " << std::chrono::duration<double, std::milli>(renderEnd - renderStart).count() << " ms\n";
+    std::cout << "Total paintEvent: " << std::chrono::duration<double, std::milli>(fullEnd - fullStart).count() << " ms\n";
 }
 
 QColor HeatMapWidget::getColorForTemperature(float temp) const {
