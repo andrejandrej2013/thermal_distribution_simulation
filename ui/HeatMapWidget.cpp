@@ -45,29 +45,53 @@ void HeatMapWidget::paintEvent(QPaintEvent *event) {
 
     int rows = gridHeight;
     int cols = gridWidth;
-    double cellWidth = static_cast<double>(width()) / cols;
-    double cellHeight = static_cast<double>(height()) / rows;
 
     auto renderStart = std::chrono::high_resolution_clock::now();
-    heatmapCache = QPixmap(size());
-    heatmapCache.fill(Qt::black);
-    QPainter pixmapPainter(&heatmapCache);
+    QImage image(cols, rows, QImage::Format_RGB32);
+    uchar* pixels = image.bits();
+
+    auto pixelLoopStart = std::chrono::high_resolution_clock::now();
 
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < cols; ++x) {
-            float temp = data[y * gridWidth + x];
+            float temp = data[y * cols + x];
             QColor color = getColorForTemperature(temp);
-            QRectF rect(x * cellWidth, y * cellHeight, cellWidth, cellHeight);
-            pixmapPainter.fillRect(rect, color);
+            int index = (y * cols + x) * 4;
+            pixels[index + 0] = color.blue();
+            pixels[index + 1] = color.green();
+            pixels[index + 2] = color.red();
+            pixels[index + 3] = 255;
         }
     }
+
+    auto pixelLoopEnd = std::chrono::high_resolution_clock::now();
+    std::cout << "Pixel color loop: "
+              << std::chrono::duration<double, std::milli>(pixelLoopEnd - pixelLoopStart).count()
+              << " ms\n";
+
+    heatmapCache = QPixmap::fromImage(image.scaled(size()));
     auto renderEnd = std::chrono::high_resolution_clock::now();
 
     painter.drawPixmap(0, 0, heatmapCache);
-    auto fullEnd = std::chrono::high_resolution_clock::now();
 
+    // === FPS logic ===
+    frameCount++;
+    if (fpsTimer.elapsed() >= 1000) {
+        currentFps = frameCount * 1000.0 / fpsTimer.elapsed();
+        frameCount = 0;
+        fpsTimer.restart();
+    }
+
+    painter.setPen(Qt::white);
+    painter.setFont(QFont("Arial", 10, QFont::Bold));
+    QString info = QString("FPS: %1\nBackend: %2 ms")
+                       .arg(currentFps, 0, 'f', 1)
+                       .arg(lastUpdateDuration, 0, 'f', 2);
+    painter.drawText(width() - 150, 30, info);
+
+    auto fullEnd = std::chrono::high_resolution_clock::now();
     std::cout << "Data fetch: " << std::chrono::duration<double, std::milli>(dataFetchEnd - dataFetchStart).count() << " ms\n";
-    std::cout << "Render fillRects: " << std::chrono::duration<double, std::milli>(renderEnd - renderStart).count() << " ms\n";
+    std::cout << "Render raw buffer: " << std::chrono::duration<double, std::milli>(renderEnd - renderStart).count() << " ms\n";
     std::cout << "Total paintEvent: " << std::chrono::duration<double, std::milli>(fullEnd - fullStart).count() << " ms\n";
 }
 
